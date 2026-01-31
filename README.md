@@ -138,6 +138,9 @@ This project is provided as-is for your use. Modify it as needed for your purpos
 
 ## Version
 
-The current version of this application is 1.0.0. This is the first release and may receive updates in the future, If you have suggestions or find issues, feel free to contribute!
+The current version of this application is 1.0.1. This may receive updates in the future, If you have suggestions or find issues, feel free to contribute!
 Current version only supports ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png", although all the files extension are listed in the settings and can be modified in the code, feel free to try it out on your local
+
+## Update
+Update method to let user choose multiple file to do 1 action at a time. Handle uploading more robust way
 

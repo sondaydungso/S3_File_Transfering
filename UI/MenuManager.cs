@@ -112,57 +112,153 @@ namespace S3FileManager.UI
             ConsoleHelper.ClearScreen();
             ConsoleHelper.PrintHeader("UPLOAD FILE");
 
-            Console.Write("Enter file path: ");
-            var filePath = Console.ReadLine()?.Trim().Trim('"');
+            Console.Write("Enter file path(s) (comma or space separated): ");
+            var input = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(filePath))
+            if (string.IsNullOrEmpty(input))
             {
                 ConsoleHelper.PrintError("File path cannot be empty.");
                 ConsoleHelper.WaitForAnyKey();
                 return;
             }
 
-            Console.WriteLine();
-            Console.WriteLine("Validating file...");
+            
+            var filePaths = new List<string>();
+            var separators = new[] { ',', ';' };
+            var parts = input.Split(separators, StringSplitOptions.RemoveEmptyEntries);
 
-            if (!fileValidator.ValidateFile(filePath, out var errors))
+            
+            if (parts.Length == 1)
             {
-                foreach (var error in errors)
+                
+                var trimmed = input.Trim().Trim('"');
+                if (File.Exists(trimmed))
                 {
-                    ConsoleHelper.PrintError(error);
+                    filePaths.Add(trimmed);
                 }
+                else
+                {
+                    
+                    var spaceParts = input.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var part in spaceParts)
+                    {
+                        var trimmedPart = part.Trim().Trim('"');
+                        if (!string.IsNullOrWhiteSpace(trimmedPart))
+                        {
+                            filePaths.Add(trimmedPart);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                foreach (var part in parts)
+                {
+                    var trimmedPart = part.Trim().Trim('"');
+                    if (!string.IsNullOrWhiteSpace(trimmedPart))
+                    {
+                        filePaths.Add(trimmedPart);
+                    }
+                }
+            }
+
+            if (filePaths.Count == 0)
+            {
+                ConsoleHelper.PrintError("No valid file paths entered.");
                 ConsoleHelper.WaitForAnyKey();
                 return;
             }
 
-            var fileInfo = new FileInfo(filePath);
-            ConsoleHelper.PrintSuccess("File exists");
-            ConsoleHelper.PrintSuccess($"Size: {fileValidator.FormatFileSize(fileInfo.Length)} (within limit)");
-            ConsoleHelper.PrintSuccess($"Type: {Path.GetExtension(filePath)} (allowed)");
+            Console.WriteLine();
+            Console.WriteLine("Validating files...");
+
+            var validFiles = new List<string>();
+            var invalidFiles = new List<(string path, List<string> errors)>();
+
+            foreach (var filePath in filePaths)
+            {
+                if (!fileValidator.ValidateFile(filePath, out var errors))
+                {
+                    invalidFiles.Add((filePath, errors));
+                }
+                else
+                {
+                    validFiles.Add(filePath);
+                }
+            }
+
+            // Show validation results
+            if (invalidFiles.Count > 0)
+            {
+                Console.WriteLine();
+                foreach (var (path, errors) in invalidFiles)
+                {
+                    ConsoleHelper.PrintError($"Invalid file: {path}");
+                    foreach (var error in errors)
+                    {
+                        ConsoleHelper.PrintError($"  - {error}");
+                    }
+                }
+            }
+
+            if (validFiles.Count == 0)
+            {
+                ConsoleHelper.PrintError("No valid files to upload.");
+                ConsoleHelper.WaitForAnyKey();
+                return;
+            }
+
+            Console.WriteLine();
+            ConsoleHelper.PrintSuccess($"Found {validFiles.Count} valid file(s) to upload:");
+            foreach (var filePath in validFiles)
+            {
+                var fileInfo = new FileInfo(filePath);
+                ConsoleHelper.PrintInfo($"  - {fileInfo.Name} ({fileValidator.FormatFileSize(fileInfo.Length)})");
+            }
 
             Console.WriteLine();
             Console.WriteLine("Uploading to S3...");
 
-            var progressBar = new ProgressBar(25);
-            progressBar.SetTotalBytes(fileInfo.Length);
-            var progress = new Progress<int>(percent => progressBar.Update(percent));
+            var successCount = 0;
+            var failCount = 0;
 
-            try
+            foreach (var filePath in validFiles)
             {
-                await s3Service.UploadFileAsync(filePath, progress);
-                progressBar.Complete();
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+                    Console.WriteLine();
+                    Console.WriteLine($"Uploading: {fileInfo.Name}");
 
-                Console.WriteLine();
-                ConsoleHelper.PrintSuccess("Upload complete!");
-                ConsoleHelper.PrintInfo($"File: {fileInfo.Name}");
-                
-                var url = await s3Service.GenerateDownloadUrlAsync(fileInfo.Name, settings.ShareLinkExpiryMinutes);
-                ConsoleHelper.PrintInfo($"URL: {url}");
+                    var progressBar = new ProgressBar(25);
+                    progressBar.SetTotalBytes(fileInfo.Length);
+                    var progress = new Progress<int>(percent => progressBar.Update(percent));
+
+                    await s3Service.UploadFileAsync(filePath, progress);
+                    progressBar.Complete();
+
+                    ConsoleHelper.PrintSuccess($"Upload complete: {fileInfo.Name}");
+                    
+                    var url = await s3Service.GenerateDownloadUrlAsync(fileInfo.Name, settings.ShareLinkExpiryMinutes);
+                    ConsoleHelper.PrintInfo($"URL: {url}");
+                    
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.PrintError($"Upload failed for '{Path.GetFileName(filePath)}': {ex.Message}");
+                    failCount++;
+                }
             }
-            catch (Exception ex)
+
+            Console.WriteLine();
+            if (successCount > 0)
             {
-                Console.WriteLine();
-                ConsoleHelper.PrintError($"Upload failed: {ex.Message}");
+                ConsoleHelper.PrintSuccess($"Successfully uploaded {successCount} file(s).");
+            }
+            if (failCount > 0)
+            {
+                ConsoleHelper.PrintError($"Failed to upload {failCount} file(s).");
             }
 
             ConsoleHelper.WaitForAnyKey();
@@ -188,36 +284,90 @@ namespace S3FileManager.UI
                 Console.WriteLine($"{i + 1}. {files[i].FileName} ({files[i].Size})");
             }
 
+
             Console.WriteLine();
-            Console.Write("Enter file number to download: ");
-            if (!int.TryParse(Console.ReadLine(), out int fileIndex) || fileIndex < 1 || fileIndex > files.Count)
+            Console.Write("Enter file number(s) to dowload (comma or space separated): ");
+            var input = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(input))
             {
-                ConsoleHelper.PrintError("Invalid file selection.");
+                ConsoleHelper.PrintError("No file selected.");
                 ConsoleHelper.WaitForAnyKey();
                 return;
             }
 
-            var selectedFile = files[fileIndex - 1];
+            var selectedFiles = new List<S3File>();
+
+
+            var separators = new[] { ',', ' ', ';' };
+            var parts = input.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 0)
+            {
+                ConsoleHelper.PrintError("No file numbers entered.");
+                ConsoleHelper.WaitForAnyKey();
+                return;
+            }
+
+            foreach (var part in parts)
+            {
+                var trimmedPart = part.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedPart))
+                    continue;
+
+                if (!int.TryParse(trimmedPart, out int fileIndex))
+                {
+                    ConsoleHelper.PrintError($"'{trimmedPart}' is not a valid number. Please enter numbers only (e.g., 1,2 or 1 2).");
+                    ConsoleHelper.WaitForAnyKey();
+                    return;
+                }
+
+                if (fileIndex < 1 || fileIndex > files.Count)
+                {
+                    ConsoleHelper.PrintError($"File number {fileIndex} is out of range. Please select between 1 and {files.Count}.");
+                    ConsoleHelper.WaitForAnyKey();
+                    return;
+                }
+                else
+                {
+                    selectedFiles.Add(files[fileIndex - 1]);
+
+                }
+
+
+            }
+
+            if (selectedFiles.Count == 0)
+            {
+                ConsoleHelper.PrintError("No valid files selected.");
+                ConsoleHelper.WaitForAnyKey();
+                return;
+            }
+
             Console.Write($"Enter destination path (default: {settings.DefaultDownloadPath}): ");
             var destinationPath = Console.ReadLine()?.Trim();
 
-            if (string.IsNullOrEmpty(destinationPath))
+            foreach (var selectedFile in selectedFiles)
             {
-                destinationPath = Path.Combine(settings.DefaultDownloadPath, selectedFile.FileName);
-            }
 
-            Console.WriteLine();
-            Console.WriteLine("Downloading...");
+                if (string.IsNullOrEmpty(destinationPath))
+                {
+                    destinationPath = Path.Combine(settings.DefaultDownloadPath, selectedFile.FileName);
+                }
 
-            try
-            {
-                await s3Service.DownloadFileAsync(selectedFile.S3Key, destinationPath);
-                ConsoleHelper.PrintSuccess($"Download complete!");
-                ConsoleHelper.PrintInfo($"Saved to: {destinationPath}");
-            }
-            catch (Exception ex)
-            {
-                ConsoleHelper.PrintError($"Download failed: {ex.Message}");
+                Console.WriteLine();
+                Console.WriteLine("Downloading...");
+
+                try
+                {
+                    await s3Service.DownloadFileAsync(selectedFile.S3Key, destinationPath);
+                    ConsoleHelper.PrintSuccess($"Download complete!");
+                    ConsoleHelper.PrintInfo($"Saved to: {destinationPath}");
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.PrintError($"Download failed: {ex.Message}");
+                }
             }
 
             ConsoleHelper.WaitForAnyKey();
@@ -354,6 +504,8 @@ namespace S3FileManager.UI
             ConsoleHelper.WaitForAnyKey();
         }
 
+
+
         private async Task GenerateShareLink()
         {
             ConsoleHelper.ClearScreen();
@@ -375,15 +527,63 @@ namespace S3FileManager.UI
             }
 
             Console.WriteLine();
-            Console.Write("Enter file number: ");
-            if (!int.TryParse(Console.ReadLine(), out int fileIndex) || fileIndex < 1 || fileIndex > files.Count)
+            Console.Write("Enter file number(s) to dowload (comma or space separated): ");
+            var input = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(input))
             {
-                ConsoleHelper.PrintError("Invalid file selection.");
+                ConsoleHelper.PrintError("No file selected.");
                 ConsoleHelper.WaitForAnyKey();
                 return;
             }
 
-            var selectedFile = files[fileIndex - 1];
+            var selectedFiles = new List<S3File>();
+
+            var separators = new[] { ',', ' ', ';' };
+            var parts = input.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 0)
+            {
+                ConsoleHelper.PrintError("No file numbers entered.");
+                ConsoleHelper.WaitForAnyKey();
+                return;
+            }
+
+            foreach (var part in parts)
+            {
+                var trimmedPart = part.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedPart))
+                    continue;
+
+                if (!int.TryParse(trimmedPart, out int fileIndex))
+                {
+                    ConsoleHelper.PrintError($"'{trimmedPart}' is not a valid number. Please enter numbers only (e.g., 1,2 or 1 2).");
+                    ConsoleHelper.WaitForAnyKey();
+                    return;
+                }
+
+                if (fileIndex < 1 || fileIndex > files.Count)
+                {
+                    ConsoleHelper.PrintError($"File number {fileIndex} is out of range. Please select between 1 and {files.Count}.");
+                    ConsoleHelper.WaitForAnyKey();
+                    return;
+                }
+                else
+                {
+                    selectedFiles.Add(files[fileIndex - 1]);
+
+                }
+
+
+            }
+
+            if (selectedFiles.Count == 0)
+            {
+                ConsoleHelper.PrintError("No valid files selected.");
+                ConsoleHelper.WaitForAnyKey();
+                return;
+            }
+            
             Console.Write($"Enter expiry time in minutes (default: {settings.ShareLinkExpiryMinutes}): ");
             var expiryInput = Console.ReadLine()?.Trim();
             int expiryMinutes = settings.ShareLinkExpiryMinutes;
@@ -396,18 +596,22 @@ namespace S3FileManager.UI
             Console.WriteLine();
             Console.WriteLine("Generating share link...");
 
-            try
+            foreach (var selectedFile in selectedFiles)
             {
-                var url = await s3Service.GenerateDownloadUrlAsync(selectedFile.S3Key, expiryMinutes);
-                Console.WriteLine();
-                ConsoleHelper.PrintSuccess("Share link generated!");
-                ConsoleHelper.PrintInfo($"File: {selectedFile.FileName}");
-                ConsoleHelper.PrintInfo($"Expires in: {expiryMinutes} minutes");
-                ConsoleHelper.PrintInfo($"URL: {url}");
-            }
-            catch (Exception ex)
-            {
-                ConsoleHelper.PrintError($"Failed to generate link: {ex.Message}");
+                try
+                {
+                    var url = await s3Service.GenerateDownloadUrlAsync(selectedFile.S3Key, expiryMinutes);
+                    Console.WriteLine();
+                    ConsoleHelper.PrintSuccess("Share link generated!");
+                    ConsoleHelper.PrintInfo($"File: {selectedFile.FileName}");
+                    ConsoleHelper.PrintInfo($"Expires in: {expiryMinutes} minutes");
+                    ConsoleHelper.PrintInfo($"URL: {url}");
+                }
+                catch (Exception ex)
+                {
+                    ConsoleHelper.PrintError($"Failed to generate link: {ex.Message}");
+                }
+
             }
 
             ConsoleHelper.WaitForAnyKey();
