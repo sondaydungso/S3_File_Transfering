@@ -138,13 +138,31 @@ This project is provided as-is for your use. Modify it as needed for your purpos
 
 ## Version
 
-The current version of this application is 1.0.1. This may receive updates in the future, If you have suggestions or find issues, feel free to contribute!
-Current version only supports ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png", although all the files extension are listed in the settings and can be modified in the code, feel free to try it out on your local
+The current version of this application is 1.0.1. This may receive updates in the future. If you have suggestions or find issues, feel free to contribute!
+Current version only supports ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png", although all the file extensions are listed in the settings and can be modified in the code, feel free to try it out on your local
 
 ## Update
-Update method to let user choose multiple file to do 1 action at a time. Handle uploading more robust way
+Update methods to let the user choose multiple files to do 1 action at a time. Handle uploading more robust way
 
 ## Demo
-Here are some picture from the program:
+Here are some pictures from the program:
+  - Main Menu:
+   <img width="1110" height="627" alt="s3_menu" src="https://github.com/user-attachments/assets/2e0ec232-adc3-4adb-a15a-f8d8b8f5292c" />
+ - Listing files:
+   <img width="1111" height="625" alt="s3_list" src="https://github.com/user-attachments/assets/1cb38bdb-4ab5-46fd-82f5-3bc92e02c5d7" />
+ - Upload files:
+   <img width="1112" height="626" alt="s3_upload" src="https://github.com/user-attachments/assets/d24067e6-08b0-48a5-8923-fe6b2f60da5e" />
+
+ - Delete files:
+   <img width="1113" height="624" alt="s3_delete" src="https://github.com/user-attachments/assets/4181e25c-81c7-4b92-af11-ca3d38bf2c38" />
+
+ - Download files:
+   <img width="1115" height="630" alt="s3_download" src="https://github.com/user-attachments/assets/6494055c-5916-4df3-a933-ab94e55137dc" />
+
+ - Setting:
+   <img width="1112" height="625" alt="s3_settings" src="https://github.com/user-attachments/assets/8542601e-8903-424f-838c-f7710f236e97" />
+
+   
+
 
 
