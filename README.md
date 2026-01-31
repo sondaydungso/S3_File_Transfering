@@ -144,3 +144,7 @@ Current version only supports ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", 
 ## Update
 Update method to let user choose multiple file to do 1 action at a time. Handle uploading more robust way
 
+## Demo
+Here are some picture from the program:
+
+

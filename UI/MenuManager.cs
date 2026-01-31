@@ -187,7 +187,7 @@ namespace S3FileManager.UI
                 }
             }
 
-            // Show validation results
+            
             if (invalidFiles.Count > 0)
             {
                 Console.WriteLine();
