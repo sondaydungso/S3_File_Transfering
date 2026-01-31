@@ -148,8 +148,10 @@ Update methods to let the user choose multiple files to do 1 action at a time. H
 Here are some pictures from the program:
   - Main Menu:
    <img width="1110" height="627" alt="s3_menu" src="https://github.com/user-attachments/assets/2e0ec232-adc3-4adb-a15a-f8d8b8f5292c" />
+   
  - Listing files:
    <img width="1111" height="625" alt="s3_list" src="https://github.com/user-attachments/assets/1cb38bdb-4ab5-46fd-82f5-3bc92e02c5d7" />
+   
  - Upload files:
    <img width="1112" height="626" alt="s3_upload" src="https://github.com/user-attachments/assets/d24067e6-08b0-48a5-8923-fe6b2f60da5e" />
 
