@@ -138,11 +138,13 @@ This project is provided as-is for your use. Modify it as needed for your purpos
 
 ## Version
 
-The current version of this application is 1.0.1. This may receive updates in the future. If you have suggestions or find issues, feel free to contribute!
+The current version of this application is 1.1.0. This may receive updates in the future. If you have suggestions or find issues, feel free to contribute!
 Current version only supports ".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png", although all the file extensions are listed in the settings and can be modified in the code, feel free to try it out on your local
 
 ## Update
 Update methods to let the user choose multiple files to do 1 action at a time. Handle uploading more robust way
+
+- 1.1.0: Big Update: multiple users, let user upload file and view file more privately. Only files uploaded by that user can be viewed/deleted by that user. Adding login user and register user methods.
 
 ## Demo
 Here are some pictures from the program:

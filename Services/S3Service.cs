@@ -15,9 +15,16 @@ namespace S3FileManager.Services
     {
         private readonly IAmazonS3 s3Client;
         private readonly string bucketName;
+        private readonly string user_id;
 
-        public S3Service(string bucketName = null, string region = null)
+        public S3Service(string user_id, string bucketName = null, string region = null)
         {
+            if (string.IsNullOrWhiteSpace(user_id))
+            {
+                throw new ArgumentException("User ID cannot be null or empty.", nameof(user_id));
+            }
+
+            this.user_id = user_id;
             var credentials = new AppCredentials();
             this.bucketName = credentials.BucketName() ?? bucketName;
 
@@ -38,13 +45,35 @@ namespace S3FileManager.Services
             s3Client = new AmazonS3Client(awsCredentials, regionEndpoint);
         }
 
+        private string GetUserPrefixedKey(string key)
+        {
+            return $"{user_id}/{key}";
+        }
+
+        private string ExtractFileName(string s3Key)
+        {
+            if (s3Key.StartsWith($"{user_id}/"))
+            {
+                return s3Key.Substring(user_id.Length + 1);
+            }
+            return Path.GetFileName(s3Key);
+        }
+
         public async Task<List<S3File>> ListFilesAsync()
         {
             try
             {
+                
+                if (string.IsNullOrWhiteSpace(user_id))
+                {
+                    throw new InvalidOperationException("User ID is not set. Cannot list files.");
+                }
+
+                var prefix = $"{user_id}/";
                 var request = new ListObjectsV2Request
                 {
-                    BucketName = bucketName
+                    BucketName = bucketName,
+                    Prefix = prefix 
                 };
 
                 var response = await s3Client.ListObjectsV2Async(request);
@@ -54,16 +83,34 @@ namespace S3FileManager.Services
                 {
                     foreach (var s3Object in response.S3Objects)
                     {
-                        files.Add(new S3File
+                        // Skip if it's just the prefix itself (folder marker)
+                        if (s3Object.Key == prefix || s3Object.Key.EndsWith("/"))
                         {
-                            FileName = Path.GetFileName(s3Object.Key),
-                            S3Key = s3Object.Key,
-                            FileSize = s3Object.Size ?? 0,
-                            LastModified = s3Object.LastModified ?? DateTime.MinValue,
-                            UploadAt = s3Object.LastModified ?? DateTime.MinValue,
-                            FileType = Path.GetExtension(s3Object.Key),
-                            Size = FormatFileSize(s3Object.Size ?? 0)
-                        });
+                            continue;
+                        }
+
+                        // Only include files that match the user prefix
+                        if (s3Object.Key.StartsWith(prefix))
+                        {
+                            var fileName = ExtractFileName(s3Object.Key);
+                            
+                            // Skip if filename is empty (shouldn't happen, but safety check)
+                            if (string.IsNullOrEmpty(fileName))
+                            {
+                                continue;
+                            }
+
+                            files.Add(new S3File
+                            {
+                                FileName = fileName,
+                                S3Key = s3Object.Key,
+                                FileSize = s3Object.Size ?? 0,
+                                LastModified = s3Object.LastModified ?? DateTime.MinValue,
+                                UploadAt = s3Object.LastModified ?? DateTime.MinValue,
+                                FileType = Path.GetExtension(fileName),
+                                Size = FormatFileSize(s3Object.Size ?? 0)
+                            });
+                        }
                     }
                 }
 
@@ -85,7 +132,7 @@ namespace S3FileManager.Services
                 }
 
                 var fileName = Path.GetFileName(filePath);
-                var key = fileName;
+                var key = GetUserPrefixedKey(fileName);
 
                 var fileTransferUtility = new TransferUtility(s3Client);
 

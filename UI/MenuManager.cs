@@ -13,12 +13,14 @@ namespace S3FileManager.UI
         private readonly IS3Service s3Service;
         private readonly IFileValidator fileValidator;
         private readonly AppSettings settings;
+        private readonly string userID;
 
-        public MenuManager(IS3Service s3Service, IFileValidator fileValidator, AppSettings settings)
+        public MenuManager(string userID, IS3Service s3Service, IFileValidator fileValidator, AppSettings settings)
         {
             this.s3Service = s3Service;
             this.fileValidator = fileValidator;
             this.settings = settings;
+            this.userID = userID;
         }
 
         public void ShowMainMenu()
@@ -26,6 +28,10 @@ namespace S3FileManager.UI
             ConsoleHelper.ClearScreen();
             Console.WriteLine("═══════════════════════════════════════════");
             Console.WriteLine("    S3 FILE MANAGER - Console Edition");
+            if (!string.IsNullOrEmpty(userID))
+            {
+                Console.WriteLine($"    User ID: {userID}");
+            }
             Console.WriteLine("═══════════════════════════════════════════");
             Console.WriteLine();
             Console.WriteLine("1. List Files");
@@ -79,7 +85,7 @@ namespace S3FileManager.UI
                 ConsoleHelper.WaitForAnyKey();
             }
         }
-
+        
         private async Task ListFiles()
         {
             ConsoleHelper.ClearScreen();
@@ -106,7 +112,7 @@ namespace S3FileManager.UI
 
             ConsoleHelper.WaitForAnyKey();
         }
-
+       
         private async Task UploadFile()
         {
             ConsoleHelper.ClearScreen();
@@ -238,8 +244,9 @@ namespace S3FileManager.UI
                     progressBar.Complete();
 
                     ConsoleHelper.PrintSuccess($"Upload complete: {fileInfo.Name}");
-                    
-                    var url = await s3Service.GenerateDownloadUrlAsync(fileInfo.Name, settings.ShareLinkExpiryMinutes);
+                    var s3Key = $"{userID}/{fileInfo.Name}";
+
+                    var url = await s3Service.GenerateDownloadUrlAsync(s3Key, settings.ShareLinkExpiryMinutes);
                     ConsoleHelper.PrintInfo($"URL: {url}");
                     
                     successCount++;
@@ -263,7 +270,7 @@ namespace S3FileManager.UI
 
             ConsoleHelper.WaitForAnyKey();
         }
-
+        
         private async Task DownloadFile()
         {
             ConsoleHelper.ClearScreen();
@@ -373,6 +380,7 @@ namespace S3FileManager.UI
             ConsoleHelper.WaitForAnyKey();
         }
 
+     
         private async Task DeleteFile()
         {
             ConsoleHelper.ClearScreen();
