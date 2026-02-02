@@ -146,6 +146,8 @@ Update methods to let the user choose multiple files to do 1 action at a time. H
 
 - 1.1.0: Big Update: multiple users, let user upload file and view file more privately. Only files uploaded by that user can be viewed/deleted by that user. Adding login user and register user methods.
 
+- 1.1.1: Fix multiple similar files uploaded users update. Add more comments in the code for better understanding.
+
 ## Demo
 Here are some pictures from the program:
   - Main Menu:

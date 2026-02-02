@@ -2,12 +2,8 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
 using S3FileManager.Models;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+
 
 namespace S3FileManager.Services
 {
@@ -52,11 +48,27 @@ namespace S3FileManager.Services
 
         private string ExtractFileName(string s3Key)
         {
+            string fileName;
             if (s3Key.StartsWith($"{user_id}/"))
             {
-                return s3Key.Substring(user_id.Length + 1);
+                fileName = s3Key.Substring(user_id.Length + 1);
             }
-            return Path.GetFileName(s3Key);
+            else
+            {
+                fileName = Path.GetFileName(s3Key);
+            }
+
+            // Remove UUID prefix if present (format: UUID-originalfilename.ext)
+            // UUID format: 8-4-4-4-12 characters separated by hyphens
+            var uuidPattern = @"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-";
+            if (Regex.IsMatch(fileName, uuidPattern))
+            {
+                // Extract original filename by removing UUID prefix
+                var match = Regex.Match(fileName, uuidPattern);
+                fileName = fileName.Substring(match.Length);
+            }
+
+            return fileName;
         }
 
         public async Task<List<S3File>> ListFilesAsync()
@@ -83,18 +95,18 @@ namespace S3FileManager.Services
                 {
                     foreach (var s3Object in response.S3Objects)
                     {
-                        // Skip if it's just the prefix itself (folder marker)
+                        
                         if (s3Object.Key == prefix || s3Object.Key.EndsWith("/"))
                         {
                             continue;
                         }
 
-                        // Only include files that match the user prefix
+                        
                         if (s3Object.Key.StartsWith(prefix))
                         {
                             var fileName = ExtractFileName(s3Object.Key);
                             
-                            // Skip if filename is empty (shouldn't happen, but safety check)
+                            
                             if (string.IsNullOrEmpty(fileName))
                             {
                                 continue;
@@ -122,7 +134,7 @@ namespace S3FileManager.Services
             }
         }
 
-        public async Task<bool> UploadFileAsync(string filePath, IProgress<int> progress)
+        public async Task<string> UploadFileAsync(string filePath, IProgress<int> progress)
         {
             try
             {
@@ -131,8 +143,14 @@ namespace S3FileManager.Services
                     throw new FileNotFoundException($"File not found: {filePath}");
                 }
 
-                var fileName = Path.GetFileName(filePath);
-                var key = GetUserPrefixedKey(fileName);
+                var originalFileName = Path.GetFileName(filePath);
+                var fileExtension = Path.GetExtension(originalFileName);
+                var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFileName);
+                
+                // Generate UUID and append to filename
+                var uuid = Guid.NewGuid().ToString();
+                var uniqueFileName = $"{uuid}-{originalFileName}";
+                var key = GetUserPrefixedKey(uniqueFileName);
 
                 var fileTransferUtility = new TransferUtility(s3Client);
 
@@ -150,7 +168,7 @@ namespace S3FileManager.Services
                 };
 
                 await fileTransferUtility.UploadAsync(uploadRequest);
-                return true;
+                return key;
             }
             catch (Exception ex)
             {

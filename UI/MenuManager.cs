@@ -240,11 +240,10 @@ namespace S3FileManager.UI
                     progressBar.SetTotalBytes(fileInfo.Length);
                     var progress = new Progress<int>(percent => progressBar.Update(percent));
 
-                    await s3Service.UploadFileAsync(filePath, progress);
+                    var s3Key = await s3Service.UploadFileAsync(filePath, progress);
                     progressBar.Complete();
 
                     ConsoleHelper.PrintSuccess($"Upload complete: {fileInfo.Name}");
-                    var s3Key = $"{userID}/{fileInfo.Name}";
 
                     var url = await s3Service.GenerateDownloadUrlAsync(s3Key, settings.ShareLinkExpiryMinutes);
                     ConsoleHelper.PrintInfo($"URL: {url}");
