@@ -126,6 +126,7 @@ namespace S3FileManager.Services
                     }
                 }
 
+                files.Reverse();
                 return files;
             }
             catch (Exception ex)
@@ -249,10 +250,6 @@ namespace S3FileManager.Services
             return $"{len:0.##} {sizes[order]}";
         }
 
-        public void Dispose()
-        {
-            s3Client?.Dispose();
-        }
     }
 }
 

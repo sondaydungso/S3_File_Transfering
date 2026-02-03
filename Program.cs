@@ -197,6 +197,7 @@ namespace S3FileManager
                 Console.WriteLine("   User_ID= the database user");
                 Console.WriteLine("   Password= your user password");
                 Console.WriteLine();
+                Console.WriteLine("Ensure you have internet connection so that it can connect to your cloud server.");
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
             }
